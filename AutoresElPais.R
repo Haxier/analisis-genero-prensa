@@ -1,3 +1,8 @@
+library(googlesheets)
+library(lubridate)
+library(dplyr)
+library(XML)
+
 # función que recoge el primer elemento de un vector
 firstelement <- function(x){x[1]}
 
@@ -11,16 +16,11 @@ nombres_pila_multiples <- function(x){
 
 # función que lee la pagina principal del diario "El Pais" y recoge un vector con todos los nombres
 # de los periodias que tienen artículos publicados.
-autores_elpais <- function(){
-    library(googlesheets)
-    library(dplyr)
-    library(XML)
+autores_elpais <- function(url){
     #obtener datos de genro del documento de google drive
-    #mujeres <- c("gemma", "sandra", "patricia", "beatriz", "ángeles", "silvia", "cristina")
     gap <- gs_title("analisis_genero_portadas")
     genero <- gap %>% gs_read(ws= "Sheet1")
     #obtener la lista de autores de la portada de elpais 
-    url <- "http://www.elpais.com"
     html <- htmlTreeParse(url, useInternalNodes =T)
     autores <- xpathSApply(html,"//span[@class='autor']",xmlValue)
     #limpiar datos
@@ -69,4 +69,19 @@ mixto <- function(autores, genero){
     else{ resultado <- "mixto" }
     
     resultado
+}
+
+#analiza todas las portadas de elpais durante los días especificados
+analizar_fechas <- function(numero_dias){
+    inicio <- as.Date("2016/04/19")
+    for (fecha in 1:numero_dias) {
+        actual <- inicio - fecha
+        anno <- year(actual)
+        mes <- formatC(month(actual), width=2, flag = "0")
+        dia <- day(actual)
+        url <- paste0("http://elpais.com/hemeroteca/elpais/", anno, "/", mes,
+                      "/", dia, "/m/portada.html")
+        data <- autores_elpais(url)
+    }
+    data
 }
