@@ -78,24 +78,21 @@ analizar_fechas <- function(numero_dias){
     inicio <- as.Date("2016/04/19")
     for (fecha in 1:numero_dias) {
         actual <- inicio - fecha
-        print(actual)
         anno <- year(actual)
         mes <- formatC(month(actual), width=2, flag = "0")
-        dia <- day(actual)
+        dia <- formatC(day(actual), width=2, flag = "0")
         url <- paste0("http://elpais.com/hemeroteca/elpais/", anno, "/", mes,
                       "/", dia, "/m/portada.html")
         autores <- autores_elpais(url = url, genero = genero)
         fila <- table(autores$resultado)
-        print(fila)
         fila <- data.frame(fecha= actual, hombres= fila[1], mujeres= fila[3], mixto= fila[2], otros= fila[4] )
         if(is.null(datos)){ 
-            print("creando la primera fila")
             datos <- fila
+            print(datos)
         }
         else{
-            print("creando mas filas")
             datos <- rbind(datos,fila)
-            
+            print(datos)
         }
     }
     datos
