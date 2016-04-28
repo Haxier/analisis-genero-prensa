@@ -85,7 +85,8 @@ analizar_fechas <- function(numero_dias){
                       "/", dia, "/m/portada.html")
         autores <- autores_elpais(url = url, genero = genero)
         fila <- table(autores$resultado)
-        fila <- data.frame(fecha= actual, hombres= fila[1], mujeres= fila[3], mixto= fila[2], otros= fila[4] )
+        fila <- data.frame(fecha= actual, hombres= fila["hombres"], mujeres= fila["mujeres"],
+                           mixto= fila["mixto"], otros= fila["otros"] )
         if(is.null(datos)){ 
             datos <- fila
             print(datos)
