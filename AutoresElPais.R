@@ -15,11 +15,9 @@ nombres_pila_multiples <- function(x){
 }
 
 # función que lee la pagina principal del diario "El Pais" y recoge un vector con todos los nombres
-# de los periodias que tienen artículos publicados.
-autores_elpais <- function(url){
-    #obtener datos de genro del documento de google drive
-    gap <- gs_title("analisis_genero_portadas")
-    genero <- gap %>% gs_read(ws= "Sheet1")
+# de los periodias que tienen artículos publicados. Después analiza los autores por género y devuelve una tabla
+autores_elpais <- function(url, genero){
+    
     #obtener la lista de autores de la portada de elpais 
     html <- htmlTreeParse(url, useInternalNodes =T)
     autores <- xpathSApply(html,"//span[@class='autor']",xmlValue)
@@ -73,15 +71,32 @@ mixto <- function(autores, genero){
 
 #analiza todas las portadas de elpais durante los días especificados
 analizar_fechas <- function(numero_dias){
+    #obtener datos de genro del documento de google drive
+    gap <- gs_title("analisis_genero_portadas")
+    genero <- gap %>% gs_read(ws= "Sheet1")
+    datos <- data_frame()
     inicio <- as.Date("2016/04/19")
     for (fecha in 1:numero_dias) {
         actual <- inicio - fecha
+        print(actual)
         anno <- year(actual)
         mes <- formatC(month(actual), width=2, flag = "0")
         dia <- day(actual)
         url <- paste0("http://elpais.com/hemeroteca/elpais/", anno, "/", mes,
                       "/", dia, "/m/portada.html")
-        data <- autores_elpais(url)
+        autores <- autores_elpais(url = url, genero = genero)
+        fila <- table(autores$resultado)
+        print(fila)
+        fila <- data.frame(fecha= actual, hombres= fila[1], mujeres= fila[3], mixto= fila[2], otros= fila[4] )
+        if(is.null(datos)){ 
+            print("creando la primera fila")
+            datos <- fila
+        }
+        else{
+            print("creando mas filas")
+            datos <- rbind(datos,fila)
+            
+        }
     }
-    data
+    datos
 }
