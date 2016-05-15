@@ -2,6 +2,7 @@ library(googlesheets)
 library(lubridate)
 library(dplyr)
 library(XML)
+library(rvest)
 
 # función que recoge el primer elemento de un vector
 firstelement <- function(x){x[1]}
@@ -16,6 +17,7 @@ nombres_pila_multiples <- function(x){
 
 # función que lee la pagina principal del diario "El Pais" y recoge un vector con todos los nombres
 # de los periodias que tienen artículos publicados. Después analiza los autores por género y devuelve una tabla
+#esta función solamente funciona para para la versión web anterior al 19 de Abril de 2016
 autores_elpais <- function(url, genero){
     
     #obtener la lista de autores de la portada de elpais 
@@ -30,6 +32,31 @@ autores_elpais <- function(url, genero){
     
     # separar multiples autores y analizar si son de un genero o mixtos
     multiples <- strsplit(multiples, " / ")
+    # pasar los autores a nombres de pila
+    multiples <- lapply(multiples, nombres_pila_multiples)
+    split_autores <- strsplit(individuales, " ")
+    individuales <- sapply(split_autores, firstelement)
+    autores <- append(multiples, individuales)
+    # obtener vector con la tabla de resultado por cada autor
+    resultado <- sapply(autores, mixto, genero)
+    autores <- sapply(autores, firstelement)
+    data <- data.frame(autores,resultado)
+    data
+}
+
+#Versión actualizada de la función para obtener datos después del 19 de Abril de 2016
+AutoresElPais2 <- function(url, genero){
+    elpais <- read_html(url)
+    #obtenes datos en bruto de la firma
+    firma  <- elpais %>% html_nodes(".firma") %>% html_text()
+    #limpiar datos
+    firma <- gsub("\n\n\n\n\n", "", firma)
+    #separar autores individuales y multiples
+    firma <- tolower(firma)
+    multiples <- autores[grep("\n\n\n\n", autores)]
+    individuales <- autores[ -grep("\n\n\n\n", autores)]
+    # separar multiples autores y analizar si son de un genero o mixtos
+    multiples <- strsplit(multiples, "\n\n\n\n")
     # pasar los autores a nombres de pila
     multiples <- lapply(multiples, nombres_pila_multiples)
     split_autores <- strsplit(individuales, " ")
