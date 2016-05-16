@@ -45,7 +45,7 @@ autores_elpais <- function(url, genero){
 }
 
 #Versión actualizada de la función para obtener datos después del 19 de Abril de 2016
-AutoresElPais2 <- function(url, genero){
+autores_elpais2 <- function(url, genero){
     elpais <- read_html(url)
     #obtenes datos en bruto de la firma
     firma  <- elpais %>% html_nodes(".firma") %>% html_text()
@@ -53,8 +53,8 @@ AutoresElPais2 <- function(url, genero){
     firma <- gsub("\n\n\n\n\n", "", firma)
     #separar autores individuales y multiples
     firma <- tolower(firma)
-    multiples <- autores[grep("\n\n\n\n", autores)]
-    individuales <- autores[ -grep("\n\n\n\n", autores)]
+    multiples <- firma[grep("\n\n\n\n", firma)]
+    individuales <- firma[ -grep("\n\n\n\n", firma)]
     # separar multiples autores y analizar si son de un genero o mixtos
     multiples <- strsplit(multiples, "\n\n\n\n")
     # pasar los autores a nombres de pila
@@ -88,7 +88,7 @@ mixto <- function(autores, genero){
         else if(sum(autores[i] %in% genero$hombre)){cont_hombre <- cont_hombre+1 }
         else{ otros <- otros+1 }
     }
-    if(otros>0){ resultado <- "Otros" }
+    if(otros>0){ resultado <- "otros" }
     else if(cont_hombre== length(autores) ){ resultado <- "hombres"}
     else if(cont_mujer== length(autores)){ resultado <- "mujeres"}
     else{ resultado <- "mixto" }
@@ -97,12 +97,13 @@ mixto <- function(autores, genero){
 }
 
 #analiza todas las portadas de elpais durante los días especificados
-analizar_fechas <- function(numero_dias){
+analizar_fechas <- function(numero_dias=1){
     #obtener datos de genro del documento de google drive
     gap <- gs_title("analisis_genero_portadas")
     genero <- gap %>% gs_read(ws= "Sheet1")
     datos <- data_frame()
-    inicio <- as.Date("2016/04/19")
+   actualizacion <- as.Date("2016/04/19")
+    inicio <- Sys.Date()
     for (fecha in 1:numero_dias) {
         actual <- inicio - fecha
         anno <- year(actual)
@@ -110,17 +111,21 @@ analizar_fechas <- function(numero_dias){
         dia <- formatC(day(actual), width=2, flag = "0")
         url <- paste0("http://elpais.com/hemeroteca/elpais/", anno, "/", mes,
                       "/", dia, "/m/portada.html")
-        autores <- autores_elpais(url = url, genero = genero)
+        if(actual >= actualizacion ){
+            autores <- autores_elpais2(url = url, genero = genero)
+        }else{
+            autores <- autores_elpais(url = url, genero = genero)
+        }
         fila <- table(autores$resultado)
         fila <- data.frame(fecha= actual, hombres= fila["hombres"], mujeres= fila["mujeres"],
                            mixto= fila["mixto"], otros= fila["otros"] )
         if(is.null(datos)){ 
             datos <- fila
-            print(datos)
+           # print(datos)
         }
         else{
             datos <- rbind(datos,fila)
-            print(datos)
+           # print(datos)
         }
     }
     datos

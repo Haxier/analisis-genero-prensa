@@ -1,13 +1,30 @@
+library(googlesheets)
+library(lubridate)
+library(dplyr)
+library(XML)
 library(rvest)
+
+# función que recoge el primer elemento de un vector
+firstelement <- function(x){x[1]}
+
+# funcion que combierte el vector de autores multiples en una lista para poder analizar cada 
+# nombre, y después limpia estos nombres para quedarse con los nombres de pila
+nombres_pila_multiples <- function(x){
+    split_autores <- strsplit(x, " ")
+    nombres_pila <- sapply(split_autores, firstelement)
+    nombres_pila
+}
+
+
 # función para obtener y analiar los autores de la portada digital de El Mundo http://elmundo.es
-autoresElMundo <- function(url, genero){
+autores_elmundo <- function(url, genero){
     elmundo <- read_html(url)
     firma  <- elmundo %>% html_nodes(".mod-author span") %>% html_text()  
     
-    autores <- tolower(firma)
+    firma <- tolower(firma)
     # separar en grupos <- mujeres, hombres y multiples autores
-    multiples <- autores[grep(" | ", autores)]
-    individuales <- autores[ -grep(" | ", autores)]
+    multiples <- firma[grep(" | ", firma, fixed = TRUE)]
+    individuales <- firma[ -grep(" | ", firma, fixed = TRUE)]
     
     # separar multiples autores y analizar si son de un genero o mixtos
     multiples <- strsplit(multiples, " | ")
@@ -21,4 +38,55 @@ autoresElMundo <- function(url, genero){
     autores <- sapply(autores, firstelement)
     data <- data.frame(autores,resultado)
     data
+}
+
+# función que compara la lista de autores recogida y la lista de periodistas mujeres y 
+# devuelve una tabla con los casos positivos y negativos
+contar_mujeres <- function(autores, mujeres){
+    autoras <- autores %in% mujeres #contains()
+    table(autoras)
+    autoras
+}
+
+# analiza la lista de autores y la compara con el vector de mujeres para sabes si es
+# "solo hombres", "solo mujeres" o "mixto"
+mixto <- function(autores, genero){
+    cont_mujer <- 0
+    cont_hombre <- 0
+    otros <- 0
+    for(i in 1:length(autores)){
+        if(sum(autores[i] %in% genero$mujer)){ cont_mujer <- cont_mujer+1 }
+        else if(sum(autores[i] %in% genero$hombre)){cont_hombre <- cont_hombre+1 }
+        else{ otros <- otros+1 }
+    }
+    if(otros>0){ resultado <- "otros" }
+    else if(cont_hombre== length(autores) ){ resultado <- "hombres"}
+    else if(cont_mujer== length(autores)){ resultado <- "mujeres"}
+    else{ resultado <- "mixto" }
+    
+    resultado
+}
+
+#analiza todas las portadas de elpais durante los días especificados
+analizar_fechasM <- function(numero_dias=1){
+    #obtener datos de genro del documento de google drive
+    gap <- gs_title("analisis_genero_portadas")
+    genero <- gap %>% gs_read(ws= "Sheet1")
+    datos <- data_frame()
+    actual <- Sys.Date()
+    url <- "http://elmundo.es"
+    autores <- autores_elmundo(url = url, genero = genero)
+
+    fila <- table(autores$resultado)
+    fila <- data.frame(fecha= actual, hombres= fila["hombres"], mujeres= fila["mujeres"],
+                    mixto= fila["mixto"], otros= fila["otros"] )
+    if(is.null(datos)){ 
+        datos <- fila
+        # print(datos)
+    }
+    else{
+        datos <- rbind(datos,fila)
+        # print(datos)
+    }
+    datos
 }
