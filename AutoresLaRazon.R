@@ -3,7 +3,6 @@ library(lubridate)
 library(dplyr)
 library(XML)
 library(rvest)
-library(stringr)
 
 # función que recoge el primer elemento de un vector
 firstelement <- function(x){x[1]}
@@ -16,27 +15,28 @@ nombres_pila_multiples <- function(x){
     nombres_pila
 }
 
-autores_eldiario <- function(url, genero){
-    eldiario <- read_html("http://eldiario.es")
-    firma  <- eldiario %>% html_nodes(".dateline") %>% html_text() 
-    firma <- tolower(firma)
+# función que lee la pagina principal del diario "El Pais" y recoge un vector con todos los nombres
+# de los periodias que tienen artículos publicados. Después analiza los autores por género y devuelve una tabla
+#esta función solamente funciona para para la versión web anterior al 19 de Abril de 2016
+autores_larazon <- function(url, genero){
+    
+    #obtener la lista de autores de la portada de elpais 
+    html <- htmlTreeParse(url, useInternalNodes =T)
+    autores <- xpathSApply(html,"//span[@class='author']",xmlValue)
     #limpiar datos
-    firma <- gsub("\n", "", firma, fixed = TRUE)
-    firma <- gsub("\t", "", firma, fixed = TRUE)
-    #quitar numeros
-    firma <- gsub("[0-9]", "", firma)
-    #quitar espacios que sobran
-    firma <- str_replace(gsub("\\s+", " ", str_trim(firma)), "B", "b")
-    #quitar delegación
-    firma <- gsub("\\s\\-\\s*\\w*$", "", firma)
+    autores <- gsub("\n", "", autores)
+    autores <- gsub("\t", "", autores)
+    #quitar el espacio antes del nombre
+    gsub("^\\s", "", autores)
+    autores <- tolower(autores)
     #eliminar filas vacías
-    firma <- firma[grep("[a-z]", firma)]
+    autores <- autores[grep("[a-z]", autores)]
     # separar en grupos <- mujeres, hombres y multiples autores
-    multiples <- firma[grep(" / ", firma, fixed = TRUE)]
-    individuales <- firma[ -grep(" / ", firma, fixed = TRUE)]
+    multiples <- autores[grep("/", autores)]
+    individuales <- autores[ -grep("/", autores)]
     
     # separar multiples autores y analizar si son de un genero o mixtos
-    multiples <- strsplit(multiples, " | ")
+    multiples <- strsplit(multiples, " / ")
     # pasar los autores a nombres de pila
     multiples <- lapply(multiples, nombres_pila_multiples)
     split_autores <- strsplit(individuales, " ")
@@ -48,6 +48,7 @@ autores_eldiario <- function(url, genero){
     data <- data.frame(autores,resultado)
     data
 }
+
 
 # función que compara la lista de autores recogida y la lista de periodistas mujeres y 
 # devuelve una tabla con los casos positivos y negativos
@@ -77,14 +78,14 @@ mixto <- function(autores, genero){
 }
 
 #analiza todas las portadas de elpais durante los días especificados
-analizar_fechasD <- function(numero_dias=1){
+analizar_fechasRZ <- function(numero_dias=1){
     #obtener datos de genro del documento de google drive
     gap <- gs_title("analisis_genero_portadas")
     genero <- gap %>% gs_read(ws= "Sheet1")
     datos <- data_frame()
     actual <- Sys.Date()
-    url <- "http://eldiario.es"
-    autores <- autores_eldiario(url = url, genero = genero)
+    url <- "http://larazon.es"
+    autores <- autores_elmundo(url = url, genero = genero)
     
     fila <- table(autores$resultado)
     fila <- data.frame(fecha= actual, hombres= fila["hombres"], mujeres= fila["mujeres"],
