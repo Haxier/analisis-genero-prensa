@@ -27,7 +27,9 @@ autores_eldiario <- function(url, genero){
     firma <- gsub("[0-9]", "", firma)
     #quitar espacios que sobran
     firma <- str_replace(gsub("\\s+", " ", str_trim(firma)), "B", "b")
-    #quitar delegación
+    #quitar los textos que están dentro de parentesis
+    firma <- gsub("\\(\\w*\\)*$", "", firma)
+    #quitar delegación al final del string, por ejemplo " - Madrid"
     firma <- gsub("\\s\\-\\s*\\w*$", "", firma)
     #eliminar filas vacías
     firma <- firma[grep("[a-z]", firma)]
